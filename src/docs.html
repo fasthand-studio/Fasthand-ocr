@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fasthand OCR API</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f5f5f5;--surface:#fff;--border:#e0e0e0;--text:#1a1a1a;--muted:#8a8a8e;
+  --blue:#007aff;--green:#34c759;--red:#ff3b30;--orange:#ff9500;
+  --code-bg:#f0f0f0;--tag-bg:#f0f0f0
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:17px;color:var(--text);background:var(--bg);line-height:1.5;-webkit-font-smoothing:antialiased}
+.topbar{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+.topbar-title{font-size:17px;font-weight:600}
+.topbar-links{display:flex;gap:6px}
+.topbar-links a{font-size:15px;font-weight:500;color:var(--blue);text-decoration:none;padding:4px 12px;border-radius:20px;border:1px solid var(--border)}
+.topbar-links a:hover{background:var(--tag-bg)}
+.container{max-width:720px;margin:0 auto;padding:24px 20px 80px}
+@media(max-width:600px){.container{padding:16px 16px 60px}}
+.hero{margin-bottom:28px}
+.hero h1{font-size:28px;font-weight:700;letter-spacing:-0.3px;margin-bottom:4px}
+.hero p{font-size:15px;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:36px;padding:20px 24px;margin-bottom:16px}
+@media(max-width:600px){.card{padding:16px 18px;border-radius:24px}}
+.card h2{font-size:17px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card>p{font-size:15px;color:var(--muted);margin-bottom:12px}
+.method-badge{display:inline-block;font-size:13px;font-weight:600;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:0.3px}
+.method-post{background:var(--green);color:#fff}
+.tag{display:inline-block;font-size:13px;font-weight:500;padding:3px 10px;border-radius:20px;background:var(--tag-bg);color:var(--text)}
+.endpoint-url{font-size:15px;font-weight:600;font-family:'SF Mono',Menlo,Monaco,monospace;margin-left:4px}
+.section-label{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 8px}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:12px;padding:14px 16px;overflow-x:auto;font-size:14px;line-height:1.55;font-family:'SF Mono',Menlo,Monaco,monospace;margin:8px 0}
+@media(max-width:600px){pre{padding:12px 14px;font-size:13px;border-radius:10px}}
+code{font-family:'SF Mono',Menlo,Monaco,monospace;font-size:14px}
+p code,li code,td code{background:var(--tag-bg);padding:2px 6px;border-radius:6px;font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:15px;margin:8px 0}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:0.3px;padding:8px 12px;border-bottom:1px solid var(--border)}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.field-row{display:flex;gap:8px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--border)}
+.field-row:last-child{border-bottom:none}
+.field-name{font-family:'SF Mono',Menlo,Monaco,monospace;font-size:14px;font-weight:500;color:var(--blue);min-width:80px}
+.field-type{font-size:13px;font-weight:500;color:var(--muted);min-width:60px}
+.field-desc{font-size:15px;color:var(--text);flex:1}
+.s-401{color:var(--orange)}
+.s-400{color:var(--orange)}
+.s-413{color:var(--orange)}
+.s-405{color:var(--muted)}
+.s-500{color:var(--red)}
+.pill-row{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.step{display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)}
+.step:last-child{border-bottom:none}
+.step-num{width:24px;height:24px;border-radius:12px;background:var(--blue);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-text{font-size:15px;flex:1}
+.note{font-size:13px;color:var(--muted);margin-top:8px}
+ul{list-style:none;padding:0}
+ul li{font-size:15px;padding:4px 0;display:flex;gap:6px;align-items:baseline}
+ul li::before{content:"";width:6px;height:6px;border-radius:3px;background:var(--blue);flex-shrink:0;margin-top:7px}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <span class="topbar-title">Fasthand OCR</span>
+  <div class="topbar-links">
+    <a href="#endpoint">Endpoint</a>
+    <a href="#auth">Auth</a>
+    <a href="#request">Request</a>
+    <a href="#response">Response</a>
+    <a href="#errors">Errors</a>
+    <a href="#try-it">Try it</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="hero">
+    <h1>Fasthand OCR</h1>
+    <p>Extract text from images in real time. Built by Fasthand Studio.</p>
+  </div>
+
+  <div class="pill-row">
+    <span class="tag">Workers AI</span>
+    <span class="tag">Llama 3.2 Vision</span>
+    <span class="tag">TypeScript</span>
+    <span class="tag">Edge Runtime</span>
+    <span class="tag">API Key Auth</span>
+  </div>
+
+  <div class="card" id="endpoint">
+    <h2><span class="method-badge method-post">POST</span> <span class="endpoint-url">/</span></h2>
+    <p>Send a base64-encoded image and get back every word the vision model can read. Accepts JPEG, PNG, and WebP.</p>
+    <ul>
+      <li>Requires a valid API key in the <code>X-API-Key</code> header</li>
+      <li>HTTPS only, CORS enabled for all origins</li>
+      <li>Returns extracted text and per-word confidence scores</li>
+    </ul>
+  </div>
+
+  <div class="card" id="auth">
+    <h2>Authentication</h2>
+    <p>Every request must include your API key. The key is validated with a timing-safe comparison and never exposed in responses.</p>
+    <div class="section-label">Headers</div>
+    <div class="field-row">
+      <span class="field-name">X-API-Key</span>
+      <span class="field-type">string</span>
+      <span class="field-desc">Required. The secret key issued for your account.</span>
+    </div>
+    <div class="field-row">
+      <span class="field-name">Content-Type</span>
+      <span class="field-type">string</span>
+      <span class="field-desc">Must be <code>application/json</code></span>
+    </div>
+    <div class="note">Missing or invalid keys return <code>401</code>. Keep the key out of client-side code and browser bundles.</div>
+  </div>
+
+  <div class="card" id="request">
+    <h2>Request</h2>
+    <p>JSON body with a single field.</p>
+    <div class="section-label">Body</div>
+    <div class="field-row">
+      <span class="field-name">image</span>
+      <span class="field-type">string</span>
+      <span class="field-desc">Base64-encoded image. Data-URL prefix <code>data:image/...;base64,</code> is stripped automatically.</span>
+    </div>
+    <pre><code>{
+  "image": "iVBORw0KGgoAAAANSUhEUg..."
+}</code></pre>
+  </div>
+
+  <div class="card" id="response">
+    <h2>Response</h2>
+    <p>All responses are JSON with CORS headers.</p>
+    <div class="section-label">200 OK</div>
+    <pre><code>{
+  "success": true,
+  "text": "Organic Whole Milk 2%",
+  "words": [
+    { "text": "Organic", "confidence": 0.92 },
+    { "text": "Whole", "confidence": 0.88 },
+    { "text": "Milk", "confidence": 0.95 },
+    { "text": "2%", "confidence": 0.87 }
+  ]
+}</code></pre>
+    <div class="section-label">Response fields</div>
+    <div class="field-row">
+      <span class="field-name">success</span>
+      <span class="field-type">boolean</span>
+      <span class="field-desc"><code>true</code> when OCR completes without error.</span>
+    </div>
+    <div class="field-row">
+      <span class="field-name">text</span>
+      <span class="field-type">string</span>
+      <span class="field-desc">Full extracted text, cleaned of LLM preamble artifacts.</span>
+    </div>
+    <div class="field-row">
+      <span class="field-name">words</span>
+      <span class="field-type">array</span>
+      <span class="field-desc">Individual words with a confidence score between 0 and 1.</span>
+    </div>
+    <div class="field-row">
+      <span class="field-name">words[].text</span>
+      <span class="field-type">string</span>
+      <span class="field-desc">A single word from the extracted text.</span>
+    </div>
+    <div class="field-row">
+      <span class="field-name">words[].confidence</span>
+      <span class="field-type">number</span>
+      <span class="field-desc">Estimated confidence. Defaults to 0.85 since Workers AI does not provide per-word scores.</span>
+    </div>
+  </div>
+
+  <div class="card" id="errors">
+    <h2>Error responses</h2>
+    <table>
+      <tr><th>Status</th><th>Cause</th><th>Body</th></tr>
+      <tr>
+        <td><span class="s-401">401</span></td>
+        <td>Missing or invalid <code>X-API-Key</code></td>
+        <td><code>{"success":false,"error":"Unauthorized: missing or invalid X-API-Key header"}</code></td>
+      </tr>
+      <tr>
+        <td><span class="s-400">400</span></td>
+        <td>Missing <code>image</code> field, invalid base64</td>
+        <td><code>{"success":false,"error":"No image provided"}</code></td>
+      </tr>
+      <tr>
+        <td><span class="s-413">413</span></td>
+        <td>Body over 8 MB or image over 6 MB</td>
+        <td><code>{"success":false,"error":"Request body too large"}</code></td>
+      </tr>
+      <tr>
+        <td><span class="s-405">405</span></td>
+        <td>Non-POST request</td>
+        <td><code>Method not allowed</code></td>
+      </tr>
+      <tr>
+        <td><span class="s-500">500</span></td>
+        <td>Model or decode failure</td>
+        <td><code>{"success":false,"error":"..."}</code></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card" id="try-it">
+    <h2>Try it</h2>
+    <p>cURL. Replace the image value with a valid base64-encoded PNG or JPEG.</p>
+    <pre><code>curl -X POST https://fasthand-ocr-worker.fasthand.workers.dev/ \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{"image": "iVBOR..."}'</code></pre>
+    <div class="section-label">Processing pipeline</div>
+    <div class="step">
+      <span class="step-num">1</span>
+      <span class="step-text">Verify API key (timing-safe) and enforce size limits.</span>
+    </div>
+    <div class="step">
+      <span class="step-num">2</span>
+      <span class="step-text">Validate base64, strip data-URL prefix, decode to byte buffer.</span>
+    </div>
+    <div class="step">
+      <span class="step-num">3</span>
+      <span class="step-text">Send image + OCR prompt to Llama 3.2 Vision via Workers AI.</span>
+    </div>
+    <div class="step">
+      <span class="step-num">4</span>
+      <span class="step-text">Parse model output, strip preamble and markdown fences.</span>
+    </div>
+    <div class="step">
+      <span class="step-num">5</span>
+      <span class="step-text">Split cleaned text into words with confidence scores.</span>
+    </div>
+    <div class="note">Response times depend on image complexity. Typical latency is 1-8 seconds.</div>
+  </div>
+
+  <div class="card">
+    <h2>Supported image formats</h2>
+    <table>
+      <tr><th>Format</th><th>Content-Type</th><th>Notes</th></tr>
+      <tr><td>JPEG</td><td><code>image/jpeg</code></td><td>Best compression for photos</td></tr>
+      <tr><td>PNG</td><td><code>image/png</code></td><td>Lossless, larger file sizes</td></tr>
+      <tr><td>WebP</td><td><code>image/webp</code></td><td>Modern format, good compression</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Integration</h2>
+    <p>This worker is designed to be called from a backend service. The recommended flow:</p>
+    <div class="step">
+      <span class="step-num">1</span>
+      <span class="step-text">Capture a frame from the device camera.</span>
+    </div>
+    <div class="step">
+      <span class="step-num">2</span>
+      <span class="step-text">Base64-encode the image data.</span>
+    </div>
+    <div class="step">
+      <span class="step-num">3</span>
+      <span class="step-text">POST to this endpoint with <code>{"image": "..."}</code>.</span>
+    </div>
+    <div class="step">
+      <span class="step-num">4</span>
+      <span class="step-text">Read the <code>text</code> field from the response.</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

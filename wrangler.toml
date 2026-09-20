@@ -1,0 +1,15 @@
+name = "fasthand-ocr-worker"
+main = "src/index.ts"
+compatibility_date = "2024-01-17"
+
+# Workers AI binding
+[ai]
+binding = "AI"
+
+# Development configuration
+[env.development]
+name = "fasthand-ocr-worker-dev"
+
+# Production configuration
+[env.production]
+name = "fasthand-ocr-worker-prod"
