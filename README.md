@@ -1,5 +1,7 @@
 # Fasthand OCR Worker
 
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/fasthand-studio/Fasthand-ocr.git)
+
 Real-time OCR (optical character recognition) API built on Cloudflare Workers AI. Send a base64-encoded image and get back the text printed on it — labels, ID cards, documents, packaging, signs.
 
 Built by **Fasthand Studio**.
