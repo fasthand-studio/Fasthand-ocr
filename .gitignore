@@ -4,3 +4,10 @@ dist/
 .dev.vars
 .env
 *.log
+
+# Go build output
+/bin/
+*.exe
+*.test
+*.out
+fasthand-ocr
