@@ -292,7 +292,10 @@ npm run deploy
 
 ## Known limitations and compatibility
 
-- **No deployment or live-inference verification.** All tests mock the provider; the suite passes without Cloudflare credentials.
+- **The docs page at `GET /` is one file shared by both implementations** (`web/docs.html`), so it still describes only the responses the Worker can produce. The Go service can also return `429` (rate-limited) and `400` for non-image bytes; the authoritative tables are here in the README until the Worker is retired, at which point the page should gain those rows.
+- **No deployment or live-inference verification.** All tests mock the provider; the suite passes without Cloudflare credentials. Checked without spending inference: the pinned model slug is present in the account's Workers AI catalog (`wrangler ai models`) and is not on the published deprecation list. The REST request shape and reply envelope follow Cloudflare's documented API and are asserted against a fake upstream; they have not been confirmed against a live call.
+- **The container is not built locally.** No Docker on the development machine; the `container` CI job builds the image and smoke-tests startup, the docs page, `401` and `400` paths, so that job is the first real verification of the `Dockerfile`.
+- **`go test -race` did not run locally.** The race detector needs cgo and there is no C toolchain on Windows here; the `go` CI job runs it on Linux.
 - `POST /` still accepts any `Content-Type`, matching the previous build rather than the docs page that recommends `application/json`. Enforcing it would break existing clients.
 - **Unreachable in practice:** the 6 MB decoded-image check. The 8 MB body cap already limits a decode to exactly 6 MB, so `413` for image size only triggers if the body cap is ever raised. It is kept because it is part of the published contract, and is unit-tested directly.
 
