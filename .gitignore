@@ -4,3 +4,13 @@ dist/
 .dev.vars
 .env
 *.log
+
+# Go build output. Anchor the binary name to the repository root: an unanchored
+# "fasthand-ocr" also matches the cmd/fasthand-ocr directory and silently
+# excludes the package's own sources from the repository.
+/bin/
+/fasthand-ocr
+/fasthand-ocr.exe
+*.exe
+*.test
+*.out

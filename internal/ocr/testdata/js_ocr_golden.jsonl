@@ -1,0 +1,60 @@
+{"input":"","cleaned":"","words":[]}
+{"input":"   \n\t ","cleaned":"","words":[]}
+{"input":"The text in the image is: Hello World","cleaned":"Hello World","words":[{"text":"Hello","confidence":0.85},{"text":"World","confidence":0.85}]}
+{"input":"The text visible in the image is Milk","cleaned":"Milk","words":[{"text":"Milk","confidence":0.85}]}
+{"input":"The text in this image reads: Bread","cleaned":"Bread","words":[{"text":"Bread","confidence":0.85}]}
+{"input":"The text in the image says: Eggs\nButter","cleaned":"Eggs\nButter","words":[{"text":"Eggs","confidence":0.85},{"text":"Butter","confidence":0.85}]}
+{"input":"I can see the following text: Rice","cleaned":"Rice","words":[{"text":"Rice","confidence":0.85}]}
+{"input":"I see the following text: Beans","cleaned":"Beans","words":[{"text":"Beans","confidence":0.85}]}
+{"input":"Here is the text from the image:\nSugar","cleaned":"Sugar","words":[{"text":"Sugar","confidence":0.85}]}
+{"input":"Here's the text in the image: Salt","cleaned":"Salt","words":[{"text":"Salt","confidence":0.85}]}
+{"input":"the text in the image is: lowercase preamble","cleaned":"lowercase preamble","words":[{"text":"lowercase","confidence":0.85},{"text":"preamble","confidence":0.85}]}
+{"input":"\"Organic Milk\"","cleaned":"Organic Milk","words":[{"text":"Organic","confidence":0.85},{"text":"Milk","confidence":0.85}]}
+{"input":"'Single quoted'","cleaned":"Single quoted","words":[{"text":"Single","confidence":0.85},{"text":"quoted","confidence":0.85}]}
+{"input":"\"Multi\nline quoted\"","cleaned":"Multi\nline quoted","words":[{"text":"Multi","confidence":0.85},{"text":"line","confidence":0.85},{"text":"quoted","confidence":0.85}]}
+{"input":"```\nOrganic Milk\n```","cleaned":"Organic Milk","words":[{"text":"Organic","confidence":0.85},{"text":"Milk","confidence":0.85}]}
+{"input":"```text\nOrganic Milk\n```","cleaned":"Organic Milk","words":[{"text":"Organic","confidence":0.85},{"text":"Milk","confidence":0.85}]}
+{"input":"Total **50** items","cleaned":"Total 50 items","words":[{"text":"Total","confidence":0.85},{"text":"50","confidence":0.85},{"text":"items","confidence":0.85}]}
+{"input":"file__name here","cleaned":"filename here","words":[{"text":"filename","confidence":0.85},{"text":"here","confidence":0.85}]}
+{"input":"price `1.20` today","cleaned":"price 1.20 today","words":[{"text":"price","confidence":0.85},{"text":"1.20","confidence":0.85},{"text":"today","confidence":0.85}]}
+{"input":"# National ID Card\nName: A","cleaned":"National ID Card\nName: A","words":[{"text":"National","confidence":0.85},{"text":"ID","confidence":0.85},{"text":"Card","confidence":0.85},{"text":"Name:","confidence":0.85},{"text":"A","confidence":0.85}]}
+{"input":"### Heading three","cleaned":"Heading three","words":[{"text":"Heading","confidence":0.85},{"text":"three","confidence":0.85}]}
+{"input":"- Government\n- Bangladesh","cleaned":"Government\nBangladesh","words":[{"text":"Government","confidence":0.85},{"text":"Bangladesh","confidence":0.85}]}
+{"input":"* one\n* two","cleaned":"one\ntwo","words":[{"text":"one","confidence":0.85},{"text":"two","confidence":0.85}]}
+{"input":"1. first\n2. second","cleaned":"first\nsecond","words":[{"text":"first","confidence":0.85},{"text":"second","confidence":0.85}]}
+{"input":"  3. indented number","cleaned":"indented number","words":[{"text":"indented","confidence":0.85},{"text":"number","confidence":0.85}]}
+{"input":"NO TEXT","cleaned":"NO TEXT","words":[{"text":"NO","confidence":0.85},{"text":"TEXT","confidence":0.85}]}
+{"input":"NO TEXT FOUND","cleaned":"NO TEXT FOUND","words":[]}
+{"input":"no text","cleaned":"no text","words":[{"text":"no","confidence":0.85},{"text":"text","confidence":0.85}]}
+{"input":"Government of Bangladesh","cleaned":"Government of Bangladesh","words":[{"text":"Government","confidence":0.85},{"text":"of","confidence":0.85},{"text":"Bangladesh","confidence":0.85}]}
+{"input":"Government of the People's Republic of Bangladesh\nNational ID Card\nName: Mohammed Rahman\nFather's Name: Abdul Karim\nDOB: 01-01-1990\nNID: 1990 1234 5678","cleaned":"Government of the People's Republic of Bangladesh\nNational ID Card\nName: Mohammed Rahman\nFather's Name: Abdul Karim\nDOB: 01-01-1990\nNID: 1990 1234 5678","words":[{"text":"Government","confidence":0.85},{"text":"of","confidence":0.85},{"text":"the","confidence":0.85},{"text":"People's","confidence":0.85},{"text":"Republic","confidence":0.85},{"text":"of","confidence":0.85},{"text":"Bangladesh","confidence":0.85},{"text":"National","confidence":0.85},{"text":"ID","confidence":0.85},{"text":"Card","confidence":0.85},{"text":"Name:","confidence":0.85},{"text":"Mohammed","confidence":0.85},{"text":"Rahman","confidence":0.85},{"text":"Father's","confidence":0.85},{"text":"Name:","confidence":0.85},{"text":"Abdul","confidence":0.85},{"text":"Karim","confidence":0.85},{"text":"DOB:","confidence":0.85},{"text":"01-01-1990","confidence":0.85},{"text":"NID:","confidence":0.85},{"text":"1990","confidence":0.85},{"text":"1234","confidence":0.85},{"text":"5678","confidence":0.85}]}
+{"input":"বাংলাদেশ সরকার\nজাতীয় পরিচয় পত্র","cleaned":"বাংলাদেশ সরকার\nজাতীয় পরিচয় পত্র","words":[{"text":"বাংলাদেশ","confidence":0.85},{"text":"সরকার","confidence":0.85},{"text":"জাতীয়","confidence":0.85},{"text":"পরিচয়","confidence":0.85},{"text":"পত্র","confidence":0.85}]}
+{"input":"العربية السعودية","cleaned":"العربية السعودية","words":[{"text":"العربية","confidence":0.85},{"text":"السعودية","confidence":0.85}]}
+{"input":"Total 100 * 200 = 20000","cleaned":"Total 100 * 200 = 20000","words":[{"text":"Total","confidence":0.85},{"text":"100","confidence":0.85},{"text":"*","confidence":0.85},{"text":"200","confidence":0.85},{"text":"=","confidence":0.85},{"text":"20000","confidence":0.85}]}
+{"input":"**Bold** and __under__ and `code` mixed","cleaned":"Bold and under and code mixed","words":[{"text":"Bold","confidence":0.85},{"text":"and","confidence":0.85},{"text":"under","confidence":0.85},{"text":"and","confidence":0.85},{"text":"code","confidence":0.85},{"text":"mixed","confidence":0.85}]}
+{"input":"The only * bullet is mid line","cleaned":"The only * bullet is mid line","words":[{"text":"The","confidence":0.85},{"text":"only","confidence":0.85},{"text":"*","confidence":0.85},{"text":"bullet","confidence":0.85},{"text":"is","confidence":0.85},{"text":"mid","confidence":0.85},{"text":"line","confidence":0.85}]}
+{"input":"Line with trailing spaces   ","cleaned":"Line with trailing spaces","words":[{"text":"Line","confidence":0.85},{"text":"with","confidence":0.85},{"text":"trailing","confidence":0.85},{"text":"spaces","confidence":0.85}]}
+{"input":"Line\nwith\nnewlines","cleaned":"Line\nwith\nnewlines","words":[{"text":"Line","confidence":0.85},{"text":"with","confidence":0.85},{"text":"newlines","confidence":0.85}]}
+{"input":"\"Text\" in \"quotes\" inside","cleaned":"\"Text\" in \"quotes\" inside","words":[{"text":"\"Text\"","confidence":0.85},{"text":"in","confidence":0.85},{"text":"\"quotes\"","confidence":0.85},{"text":"inside","confidence":0.85}]}
+{"input":"```unclosed fence","cleaned":"fence","words":[{"text":"fence","confidence":0.85}]}
+{"input":"unclosed fence at start ```","cleaned":"unclosed fence at start","words":[{"text":"unclosed","confidence":0.85},{"text":"fence","confidence":0.85},{"text":"at","confidence":0.85},{"text":"start","confidence":0.85}]}
+{"input":"##","cleaned":"","words":[]}
+{"input":"- - -","cleaned":"- -","words":[{"text":"-","confidence":0.85},{"text":"-","confidence":0.85}]}
+{"input":"http://example.com/path?q=1","cleaned":"http://example.com/path?q=1","words":[{"text":"http://example.com/path?q=1","confidence":0.85}]}
+{"input":"Email: a@b.co.uk","cleaned":"Email: a@b.co.uk","words":[{"text":"Email:","confidence":0.85},{"text":"a@b.co.uk","confidence":0.85}]}
+{"input":"12% off **today**","cleaned":"12% off today","words":[{"text":"12%","confidence":0.85},{"text":"off","confidence":0.85},{"text":"today","confidence":0.85}]}
+{"input":"Version 1.2.3","cleaned":"Version 1.2.3","words":[{"text":"Version","confidence":0.85},{"text":"1.2.3","confidence":0.85}]}
+{"input":"3.14 is a number","cleaned":"3.14 is a number","words":[{"text":"3.14","confidence":0.85},{"text":"is","confidence":0.85},{"text":"a","confidence":0.85},{"text":"number","confidence":0.85}]}
+{"input":"Table | col | col","cleaned":"Table | col | col","words":[{"text":"Table","confidence":0.85},{"text":"|","confidence":0.85},{"text":"col","confidence":0.85},{"text":"|","confidence":0.85},{"text":"col","confidence":0.85}]}
+{"input":"Quote \" inside ' single","cleaned":"Quote \" inside ' single","words":[{"text":"Quote","confidence":0.85},{"text":"\"","confidence":0.85},{"text":"inside","confidence":0.85},{"text":"'","confidence":0.85},{"text":"single","confidence":0.85}]}
+{"input":" non-breaking space here","cleaned":"non-breaking space here","words":[{"text":"non-breaking","confidence":0.85},{"text":"space","confidence":0.85},{"text":"here","confidence":0.85}]}
+{"input":"​zero width​space","cleaned":"​zero width​space","words":[{"text":"​zero","confidence":0.85},{"text":"width​space","confidence":0.85}]}
+{"input":"Full-width ｉｄｅｏｇｒａｐｈｉｃ ｔｅｘｔ","cleaned":"Full-width ｉｄｅｏｇｒａｐｈｉｃ ｔｅｘｔ","words":[{"text":"Full-width","confidence":0.85},{"text":"ｉｄｅｏｇｒａｐｈｉｃ","confidence":0.85},{"text":"ｔｅｘｔ","confidence":0.85}]}
+{"input":"   The text in the image is:  padded  ","cleaned":"The text in the image is:  padded","words":[{"text":"The","confidence":0.85},{"text":"text","confidence":0.85},{"text":"in","confidence":0.85},{"text":"the","confidence":0.85},{"text":"image","confidence":0.85},{"text":"is:","confidence":0.85},{"text":"padded","confidence":0.85}]}
+{"input":"NOTEXT","cleaned":"NOTEXT","words":[{"text":"NOTEXT","confidence":0.85}]}
+{"input":"NO TEXT HERE","cleaned":"NO TEXT HERE","words":[{"text":"NO","confidence":0.85},{"text":"TEXT","confidence":0.85},{"text":"HERE","confidence":0.85}]}
+{"input":"The text is important","cleaned":"The text is important","words":[{"text":"The","confidence":0.85},{"text":"text","confidence":0.85},{"text":"is","confidence":0.85},{"text":"important","confidence":0.85}]}
+{"input":"_under_single_","cleaned":"_under_single_","words":[{"text":"_under_single_","confidence":0.85}]}
+{"input":"*** triple bold ***","cleaned":"triple bold *","words":[{"text":"triple","confidence":0.85},{"text":"bold","confidence":0.85},{"text":"*","confidence":0.85}]}
+{"input":"   \n```\n\nReal text\n\n```\n   ","cleaned":"Real text","words":[{"text":"Real","confidence":0.85},{"text":"text","confidence":0.85}]}
+{"input":"# Heading\n```\n**fenced bold**\n```","cleaned":"Heading\n\nfenced bold","words":[{"text":"Heading","confidence":0.85},{"text":"fenced","confidence":0.85},{"text":"bold","confidence":0.85}]}
