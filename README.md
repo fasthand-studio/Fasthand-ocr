@@ -13,7 +13,7 @@ Built by **Fasthand Studio**.
 - Accepts a base64 JPEG, PNG or WebP image and returns the transcribed text plus a per-word breakdown.
 - Uses the **Llama 3.2 11B Vision** model, which reads small and mixed-script print far better than older vision models.
 - Requires an API key on every OCR call.
-- Serves interactive API docs at `GET /`.
+- Serves interactive API docs at `GET /`
 
 ## Features
 
