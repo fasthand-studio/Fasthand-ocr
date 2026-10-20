@@ -60,6 +60,9 @@ type Server struct {
 	provider ocr.Provider
 	cfg      config.Config
 	keyHash  [sha256.Size]byte // hashed secret, so comparison is fixed-length
+	// inflight caps how many request bodies may be buffered at once; slots
+	// caps how many of them may be in front of the model at once.
+	inflight chan struct{}
 	slots    chan struct{}
 	log      *slog.Logger
 }
@@ -71,6 +74,7 @@ func New(provider ocr.Provider, cfg config.Config, log *slog.Logger) *Server {
 	s := &Server{
 		provider: provider,
 		cfg:      cfg,
+		inflight: make(chan struct{}, cfg.MaxConcurrentRequests),
 		slots:    make(chan struct{}, cfg.MaxConcurrentOCR),
 		log:      log,
 	}
@@ -153,6 +157,17 @@ func (s *Server) handleOCR(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Take the buffering permit before reading anything: the body is held
+	// wholly in memory, so the number of concurrent reads is what bounds the
+	// heap. Refusing is cheaper than swapping.
+	releaseRequest, ok := acquire(s.inflight)
+	if !ok {
+		w.Header().Set("Retry-After", "1")
+		writeJSON(w, http.StatusTooManyRequests, errorResponse{Error: msgBusy})
+		return
+	}
+	defer releaseRequest()
+
 	data, mime, apiErr := s.readImage(w, r)
 	if apiErr != nil {
 		writeJSON(w, apiErr.status, errorResponse{Error: apiErr.message})
@@ -161,7 +176,7 @@ func (s *Server) handleOCR(w http.ResponseWriter, r *http.Request) {
 
 	// Bound in-flight inference so a burst cannot exhaust memory or upstream
 	// quota on behalf of everyone else.
-	release, ok := s.acquireSlot()
+	release, ok := acquire(s.slots)
 	if !ok {
 		w.Header().Set("Retry-After", "1")
 		writeJSON(w, http.StatusTooManyRequests, errorResponse{Error: msgBusy})
@@ -206,6 +221,13 @@ func (s *Server) readImage(w http.ResponseWriter, r *http.Request) ([]byte, stri
 		Image json.RawMessage `json:"image"`
 	}
 	if err := json.Unmarshal(payload, &body); err != nil {
+		// A body that parses but is not an object simply has no image field, and
+		// that is what the previous build reported. Only a document that cannot
+		// be parsed at all is an invalid-JSON error.
+		var wrongType *json.UnmarshalTypeError
+		if errors.As(err, &wrongType) {
+			return nil, "", &apiError{http.StatusBadRequest, msgNoImage}
+		}
 		return nil, "", &apiError{http.StatusBadRequest, msgBadJSON}
 	}
 
@@ -246,12 +268,12 @@ func (s *Server) authenticated(r *http.Request) bool {
 	return subtle.ConstantTimeCompare(sum[:], s.keyHash[:]) == 1
 }
 
-// acquireSlot takes one inference slot without queueing. Saturation asks the
-// client to back off instead of stalling the server.
-func (s *Server) acquireSlot() (func(), bool) {
+// acquire takes one permit from a bounded pool without queueing. Saturation
+// asks the client to back off instead of stalling the server.
+func acquire(pool chan struct{}) (func(), bool) {
 	select {
-	case s.slots <- struct{}{}:
-		return func() { <-s.slots }, true
+	case pool <- struct{}{}:
+		return func() { <-pool }, true
 	default:
 		return nil, false
 	}

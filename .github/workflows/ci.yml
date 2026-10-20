@@ -35,3 +35,48 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npx wrangler deploy --dry-run --outdir=dist
+
+  # The container is the artifact the Go service is deployed as, and no other
+  # job proves it builds, starts, refuses to start without configuration, or
+  # serves traffic. Placeholder credentials are used only so the process can
+  # boot; every assertion below runs on paths that never call the model.
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t fasthand-ocr-ci .
+      - name: Refuses to start without provider settings
+        run: |
+          out=$(docker run --rm fasthand-ocr-ci 2>&1 || true)
+          echo "$out"
+          echo "$out" | grep -q "missing required settings: CF_ACCOUNT_ID, CF_API_TOKEN"
+      - name: Start with placeholder credentials
+        run: |
+          docker run -d --rm --name fhci \
+            -e API_KEY=ci-test-key \
+            -e CF_ACCOUNT_ID=00000000000000000000000000000000 \
+            -e CF_API_TOKEN=placeholder-not-a-real-token \
+            -p 127.0.0.1:8787:8080 fasthand-ocr-ci
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8787/ >/dev/null 2>&1; then exit 0; fi
+            sleep 1
+          done
+          echo "service did not become ready"
+          exit 1
+      - name: Docs page is served
+        run: curl -fsS http://127.0.0.1:8787/ | grep -q "Fasthand OCR"
+      - name: Auth and validation hold before the model
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8787/)
+          test "$code" = "401" || { echo "unauthenticated POST = $code, want 401"; exit 1; }
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8787/ \
+            -H 'X-API-Key: ci-test-key' -H 'Content-Type: application/json' \
+            -d '{"image":"!!!not base64!!!"}')
+          test "$code" = "400" || { echo "bad base64 POST = $code, want 400"; exit 1; }
+      - name: Container logs
+        if: always()
+        run: docker logs fhci || true
+      - name: Stop container
+        if: always()
+        run: docker rm -f fhci || true

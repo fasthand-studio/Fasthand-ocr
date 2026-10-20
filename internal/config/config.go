@@ -16,6 +16,12 @@ const (
 	DefaultUpstream   = 60 * time.Second
 	DefaultRequest    = 90 * time.Second
 	DefaultConcurrent = 32
+
+	// DefaultConcurrentRequests bounds how many OCR bodies may be buffered at
+	// once. Every request is read into memory before the model sees it, so
+	// without this the worst-case footprint is (number of open connections x
+	// max body size) and a single client can exhaust the heap.
+	DefaultConcurrentRequests = 64
 )
 
 // Config holds every runtime setting the service needs. All secrets arrive
@@ -29,6 +35,8 @@ type Config struct {
 	UpstreamTimeout  time.Duration
 	RequestTimeout   time.Duration
 	MaxConcurrentOCR int
+	// MaxConcurrentRequests bounds buffered bodies; see DefaultConcurrentRequests.
+	MaxConcurrentRequests int
 }
 
 // MissingProvider reports the settings without which no request can ever be
@@ -70,6 +78,7 @@ func FromEnv() (Config, error) {
 	var errs []error
 	cfg.UpstreamTimeout, cfg.RequestTimeout = DefaultUpstream, DefaultRequest
 	cfg.MaxConcurrentOCR = DefaultConcurrent
+	cfg.MaxConcurrentRequests = DefaultConcurrentRequests
 
 	if d, err := durationEnv("UPSTREAM_TIMEOUT", DefaultUpstream); err != nil {
 		errs = append(errs, err)
@@ -85,6 +94,15 @@ func FromEnv() (Config, error) {
 		errs = append(errs, err)
 	} else {
 		cfg.MaxConcurrentOCR = n
+	}
+	if n, err := intEnv("MAX_CONCURRENT_REQUESTS", DefaultConcurrentRequests); err != nil {
+		errs = append(errs, err)
+	} else {
+		cfg.MaxConcurrentRequests = n
+	}
+	if cfg.MaxConcurrentOCR > cfg.MaxConcurrentRequests {
+		errs = append(errs, fmt.Errorf("MAX_CONCURRENT_OCR (%d) must not exceed MAX_CONCURRENT_REQUESTS (%d), which would make the inference limit unreachable",
+			cfg.MaxConcurrentOCR, cfg.MaxConcurrentRequests))
 	}
 	if cfg.UpstreamTimeout > cfg.RequestTimeout {
 		errs = append(errs, fmt.Errorf("UPSTREAM_TIMEOUT (%s) must not exceed REQUEST_TIMEOUT (%s)",

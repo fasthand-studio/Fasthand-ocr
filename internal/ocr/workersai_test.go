@@ -254,6 +254,67 @@ func pngBytes() []byte {
 	return append([]byte("\x89PNG\r\n\x1a\n"), []byte("0123456789")...)
 }
 
+// The prompt is the product: transcription quality depends on its exact
+// wording. It was copied out of the deployed Worker, so pin it against that
+// string instead of against the Go constant, which any edit satisfies by
+// definition.
+func TestPromptIsTheDeployedWorkerString(t *testing.T) {
+	const deployed = `TRANSCRIBE ALL TEXT VISIBLE IN THIS IMAGE, CHARACTER FOR CHARACTER, IN ITS ORIGINAL LAYOUT AND ORDER. Include every label, heading, name, number, line, and field value exactly as written, preserving case and special characters. Do NOT describe the image, do NOT summarize, do NOT add commentary or bullets. Output only the raw text. If no text is legible, output exactly: NO TEXT`
+	if Prompt != deployed {
+		t.Errorf("prompt drifted from the Worker\n got: %s\nwant: %s", Prompt, deployed)
+	}
+}
+
+// A rejected token must read differently from a model fault, because it is the
+// one upstream failure an operator can fix, and the status alone does not say so.
+func TestRecognizeNamesCredentialFailures(t *testing.T) {
+	for _, status := range []int{http.StatusUnauthorized, http.StatusForbidden} {
+		provider, _ := newUpstream(t, func(w http.ResponseWriter, _ *http.Request, _ string) {
+			w.WriteHeader(status)
+			_, _ = io.WriteString(w, `{"success":false,"errors":[{"code":10000,"message":"Invalid API token"}]}`)
+		})
+		_, err := provider.Recognize(context.Background(), &Image{Data: pngBytes(), MIME: "image/png"})
+		if err == nil {
+			t.Fatalf("status %d: want an error", status)
+		}
+		for _, want := range []string{"credentials", "CF_API_TOKEN", "Invalid API token"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("status %d: error %q does not mention %q", status, err, want)
+			}
+		}
+		if strings.Contains(err.Error(), testToken) {
+			t.Errorf("error echoed the token: %v", err)
+		}
+	}
+}
+
+func TestRecognizeOversizedUpstreamResponse(t *testing.T) {
+	provider, _ := newUpstream(t, func(w http.ResponseWriter, _ *http.Request, _ string) {
+		_, _ = io.WriteString(w, `{"success":true,"result":{"response":"`)
+		_, _ = io.WriteString(w, strings.Repeat("x", maxUpstreamResponse))
+		_, _ = io.WriteString(w, `"}}`)
+	})
+	_, err := provider.Recognize(context.Background(), &Image{Data: pngBytes(), MIME: "image/png"})
+	if err == nil || !strings.Contains(err.Error(), "larger than") {
+		t.Fatalf("err = %v, want a truncation error, not a JSON parse failure", err)
+	}
+}
+
+// The cap must not bite a reply that fits: a dense full-page transcription is
+// legitimately large.
+func TestRecognizeLargeButWithinCap(t *testing.T) {
+	text := strings.Repeat("transcribed ", (maxUpstreamResponse/12)-8)
+	provider, _ := newUpstream(t, jsonReply(text))
+
+	got, err := provider.Recognize(context.Background(), &Image{Data: pngBytes(), MIME: "image/png"})
+	if err != nil {
+		t.Fatalf("Recognize: %v", err)
+	}
+	if len(got) != len(text) {
+		t.Errorf("got %d bytes, want %d", len(got), len(text))
+	}
+}
+
 func BenchmarkRecognizePayload(b *testing.B) {
 	// Local cost of building the upstream request for a 1 MB image; network
 	// time and model inference are deliberately excluded from this number.

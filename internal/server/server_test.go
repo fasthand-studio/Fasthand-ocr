@@ -56,11 +56,12 @@ func ok(text string) func(context.Context, *ocr.Image) (string, error) {
 func newServer(t *testing.T, provider ocr.Provider, tweak func(*config.Config)) *httptest.Server {
 	t.Helper()
 	cfg := config.Config{
-		APIKey:           testKey,
-		Model:            config.DefaultModel,
-		UpstreamTimeout:  time.Second,
-		RequestTimeout:   5 * time.Second,
-		MaxConcurrentOCR: 128,
+		APIKey:                testKey,
+		Model:                 config.DefaultModel,
+		UpstreamTimeout:       time.Second,
+		RequestTimeout:        5 * time.Second,
+		MaxConcurrentOCR:      128,
+		MaxConcurrentRequests: 128,
 	}
 	if tweak != nil {
 		tweak(&cfg)
@@ -231,7 +232,15 @@ func TestRequestValidation(t *testing.T) {
 		{"empty body", "", http.StatusBadRequest, msgBadJSON},
 		{"truncated json", `{"image":`, http.StatusBadRequest, msgBadJSON},
 		{"not json at all", "hello", http.StatusBadRequest, msgBadJSON},
-		{"json array", `["a"]`, http.StatusBadRequest, msgBadJSON},
+		{"trailing garbage", `{} extra`, http.StatusBadRequest, msgBadJSON},
+		// Well-formed JSON that simply is not an object has no image field. The
+		// previous build answered "No image provided" for these, and a valid-JSON
+		// body should not be reported as a parse failure.
+		{"json array", `["a"]`, http.StatusBadRequest, msgNoImage},
+		{"json string", `"just a string"`, http.StatusBadRequest, msgNoImage},
+		{"json number", `42`, http.StatusBadRequest, msgNoImage},
+		{"json boolean", `true`, http.StatusBadRequest, msgNoImage},
+		{"json null", `null`, http.StatusBadRequest, msgNoImage},
 		{"missing image field", map[string]any{}, http.StatusBadRequest, msgNoImage},
 		{"null image", map[string]any{"image": nil}, http.StatusBadRequest, msgNoImage},
 		{"empty string image", map[string]any{"image": ""}, http.StatusBadRequest, msgNoImage},
@@ -416,7 +425,17 @@ func TestConcurrencyIsBounded(t *testing.T) {
 		t.Fatal("provider never started the first request")
 	}
 
-	overflow := post(t, srv.URL, testKey, body)
+	// Bounded so a regression that stops refusing shows up as a failure rather
+	// than as a test that waits for the suite timeout.
+	overflowCh := make(chan *http.Response, 1)
+	go func() { overflowCh <- post(t, srv.URL, testKey, body) }()
+	var overflow *http.Response
+	select {
+	case overflow = <-overflowCh:
+	case <-time.After(5 * time.Second):
+		close(release)
+		t.Fatal("second request was not refused: the inference limit is not enforced")
+	}
 	if overflow.StatusCode != http.StatusTooManyRequests {
 		t.Errorf("overflow status = %d, want 429", overflow.StatusCode)
 	}
@@ -469,6 +488,73 @@ func TestSlotsReleasedAfterFailure(t *testing.T) {
 			t.Fatalf("request %d: status = %d, want 500", i, resp.StatusCode)
 		}
 	}
+}
+
+// The request permit spans the whole handler, so buffered bodies cannot pile up
+// past MAX_CONCURRENT_REQUESTS even while inference slots are still free. This
+// is the memory bound: the legacy build had none.
+func TestConcurrentRequestsAreBounded(t *testing.T) {
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	provider := &fakeProvider{fn: func(context.Context, *ocr.Image) (string, error) {
+		once.Do(func() { close(entered) })
+		<-release
+		return "text", nil
+	}}
+	srv := newServer(t, provider, func(cfg *config.Config) {
+		cfg.MaxConcurrentRequests = 1
+		cfg.MaxConcurrentOCR = 8 // inference must not be the limit under test
+	})
+
+	body := map[string]any{"image": base64.StdEncoding.EncodeToString(pngBytes)}
+	first := make(chan *http.Response, 1)
+	go func() { first <- post(t, srv.URL, testKey, body) }()
+	select {
+	case <-entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("provider never started the first request")
+	}
+
+	overflow := make(chan *http.Response, 1)
+	go func() { overflow <- post(t, srv.URL, testKey, body) }()
+	var refused *http.Response
+	select {
+	case refused = <-overflow:
+	case <-time.After(5 * time.Second):
+		close(release)
+		t.Fatal("second request was neither refused nor served: the request bound is not enforced")
+	}
+	if refused.StatusCode != http.StatusTooManyRequests {
+		t.Errorf("status = %d, want 429 while the request permit is held", refused.StatusCode)
+	}
+	if refused.Header.Get("Retry-After") == "" {
+		t.Error("429 is missing Retry-After")
+	}
+
+	// The documentation page buffers nothing, so it must stay available while
+	// the OCR path is saturated.
+	docs, err := http.Get(srv.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer docs.Body.Close()
+	if docs.StatusCode != http.StatusOK {
+		t.Errorf("docs status = %d, want 200 while OCR is saturated", docs.StatusCode)
+	}
+
+	close(release)
+	resp := <-first
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("first status = %d, want 200", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	after := post(t, srv.URL, testKey, body)
+	if after.StatusCode != http.StatusOK {
+		t.Errorf("status after release = %d, want 200 (request permit leaked)", after.StatusCode)
+	}
+	after.Body.Close()
 }
 
 func TestRouting(t *testing.T) {
@@ -680,7 +766,7 @@ func TestResponseShapeMatchesContract(t *testing.T) {
 
 func ExampleServer() {
 	provider := &fakeProvider{fn: ok("Milk 2%")}
-	cfg := config.Config{APIKey: testKey, MaxConcurrentOCR: 4, RequestTimeout: time.Second, UpstreamTimeout: time.Second}
+	cfg := config.Config{APIKey: testKey, MaxConcurrentOCR: 4, MaxConcurrentRequests: 4, RequestTimeout: time.Second, UpstreamTimeout: time.Second}
 	srv := httptest.NewServer(New(provider, cfg, slog.New(slog.NewTextHandler(io.Discard, nil))).Handler())
 	defer srv.Close()
 

@@ -95,11 +95,23 @@ func (w *WorkerAI) Recognize(ctx context.Context, img *Image) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxUpstreamResponse))
+	// One byte past the cap is read so an oversized reply is reported as
+	// truncated rather than failing later as invalid JSON.
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxUpstreamResponse+1))
 	if err != nil {
 		return "", fmt.Errorf("reading upstream response: %w", err)
 	}
+	if len(body) > maxUpstreamResponse {
+		return "", fmt.Errorf("upstream response larger than %d bytes", maxUpstreamResponse)
+	}
 	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			// A rejected token looks identical to a model fault in the logs
+			// unless it is named, and this is the one failure an operator can
+			// actually fix. No credential is echoed.
+			return "", fmt.Errorf("upstream rejected the credentials (status %d): %s; check CF_ACCOUNT_ID and that CF_API_TOKEN is allowed to run Workers AI models",
+				resp.StatusCode, providerMessage(body))
+		}
 		return "", fmt.Errorf("upstream status %d: %s", resp.StatusCode, providerMessage(body))
 	}
 

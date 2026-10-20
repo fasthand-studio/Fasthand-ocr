@@ -43,6 +43,13 @@ func TestFromEnvDefaults(t *testing.T) {
 	if cfg.MaxConcurrentOCR != DefaultConcurrent {
 		t.Errorf("MaxConcurrentOCR = %d, want %d", cfg.MaxConcurrentOCR, DefaultConcurrent)
 	}
+	if cfg.MaxConcurrentRequests != DefaultConcurrentRequests {
+		t.Errorf("MaxConcurrentRequests = %d, want %d", cfg.MaxConcurrentRequests, DefaultConcurrentRequests)
+	}
+	if cfg.MaxConcurrentRequests < cfg.MaxConcurrentOCR {
+		t.Errorf("the default request bound (%d) must not sit below the inference bound (%d)",
+			cfg.MaxConcurrentRequests, cfg.MaxConcurrentOCR)
+	}
 	if missing := cfg.Missing(); len(missing) != 0 {
 		t.Errorf("Missing = %v, want none", missing)
 	}
@@ -57,6 +64,7 @@ func TestFromEnvOverrides(t *testing.T) {
 	t.Setenv("UPSTREAM_TIMEOUT", "45s")
 	t.Setenv("REQUEST_TIMEOUT", "2m")
 	t.Setenv("MAX_CONCURRENT_OCR", "7")
+	t.Setenv("MAX_CONCURRENT_REQUESTS", "16")
 
 	cfg, err := FromEnv()
 	if err != nil {
@@ -70,6 +78,9 @@ func TestFromEnvOverrides(t *testing.T) {
 	}
 	if cfg.MaxConcurrentOCR != 7 {
 		t.Errorf("MaxConcurrentOCR = %d, want 7", cfg.MaxConcurrentOCR)
+	}
+	if cfg.MaxConcurrentRequests != 16 {
+		t.Errorf("MaxConcurrentRequests = %d, want 16", cfg.MaxConcurrentRequests)
 	}
 }
 
@@ -149,7 +160,12 @@ func TestFromEnvInvalidValues(t *testing.T) {
 		{"non numeric concurrency", "MAX_CONCURRENT_OCR", "many", "MAX_CONCURRENT_OCR"},
 		{"zero concurrency", "MAX_CONCURRENT_OCR", "0", "MAX_CONCURRENT_OCR"},
 		{"negative concurrency", "MAX_CONCURRENT_OCR", "-3", "MAX_CONCURRENT_OCR"},
+		{"non numeric request limit", "MAX_CONCURRENT_REQUESTS", "many", "MAX_CONCURRENT_REQUESTS"},
+		{"zero request limit", "MAX_CONCURRENT_REQUESTS", "0", "MAX_CONCURRENT_REQUESTS"},
 		{"upstream above request", "UPSTREAM_TIMEOUT", "5m", "must not exceed"},
+		// Raising inference past the buffering bound would make the inference
+		// limit unreachable, so it is rejected rather than silently ignored.
+		{"inference above request bound", "MAX_CONCURRENT_OCR", "128", "MAX_CONCURRENT_REQUESTS"},
 	}
 
 	for _, tc := range tests {

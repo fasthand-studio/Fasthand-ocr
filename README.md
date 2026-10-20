@@ -81,10 +81,13 @@ Never commit `.dev.vars`, `.env`, `.wrangler/`, `node_modules/`, or any real API
 | `AI_MODEL` | no | `@cf/meta/llama-3.2-11b-vision-instruct` | Vision model slug |
 | `ADDR` | no | `:8787` | Listen address |
 | `UPSTREAM_TIMEOUT` | no | `60s` | Deadline for the model call |
-| `REQUEST_TIMEOUT` | no | `90s` | Deadline for the whole request |
-| `MAX_CONCURRENT_OCR` | no | `32` | In-flight inference limit; over it returns `429` |
+| `REQUEST_TIMEOUT` | no | `90s` | Deadline for the model call plus cleanup, counted after the body has arrived |
+| `MAX_CONCURRENT_REQUESTS` | no | `64` | OCR requests read into memory at once; over it returns `429` |
+| `MAX_CONCURRENT_OCR` | no | `32` | Of those, how many may be in front of the model at once |
 
-Timeouts are Go durations (`30s`, `2m`). `UPSTREAM_TIMEOUT` must not exceed `REQUEST_TIMEOUT`.
+Timeouts are Go durations (`30s`, `2m`). `UPSTREAM_TIMEOUT` must not exceed `REQUEST_TIMEOUT`, and `MAX_CONCURRENT_OCR` must not exceed `MAX_CONCURRENT_REQUESTS` — an inference limit above the buffering limit could never be reached, so the combination is rejected at startup instead of being quietly ignored.
+
+The two limits bound different things. A request body is buffered whole in memory before the model is called, so `MAX_CONCURRENT_REQUESTS` is the memory guard: worst case is `MAX_CONCURRENT_REQUESTS × 8 MB` of body bytes, which is why the default is modest. `MAX_CONCURRENT_OCR` is the quota guard, keeping a burst from spending your free-tier neurons in one second. The documentation page buffers nothing and is not counted against either.
 
 **Startup behaviour.** A missing `CF_ACCOUNT_ID` or `CF_API_TOKEN` stops the process immediately and names the variable, because no request could ever succeed. A missing `API_KEY` only warns at startup and answers `503` on requests, matching what deployed clients already see.
 
@@ -157,14 +160,14 @@ go build ./cmd/fasthand-ocr
 | Status | Cause | Body |
 |---|---|---|
 | `401` | Missing or invalid `X-API-Key` | `{"success":false,"error":"Unauthorized: missing or invalid X-API-Key header"}` |
-| `400` | Missing/non-string `image` | `{"success":false,"error":"No image provided"}` |
+| `400` | Missing/non-string `image`, or JSON that is not an object | `{"success":false,"error":"No image provided"}` |
 | `400` | Malformed base64 | `{"success":false,"error":"Invalid base64 image data"}` |
 | `400` | Bytes are not JPEG/PNG/WebP | `{"success":false,"error":"Unsupported image format (JPEG, PNG or WebP required)"}` |
-| `400` | Body is not valid JSON | `{"success":false,"error":"Invalid JSON body"}` |
+| `400` | Body does not parse as JSON at all | `{"success":false,"error":"Invalid JSON body"}` |
 | `413` | Body > 8 MB or decoded image > 6 MB | `{"success":false,"error":"Request body too large (max 8 MB)"}` |
 | `404` | Any other path | `{"success":false,"error":"Not found"}` |
 | `405` | Non-POST on `/` | `Method not allowed` (plain text) |
-| `429` | `MAX_CONCURRENT_OCR` reached | `{"success":false,"error":"Server busy, please retry"}` + `Retry-After` |
+| `429` | `MAX_CONCURRENT_REQUESTS` or `MAX_CONCURRENT_OCR` reached | `{"success":false,"error":"Server busy, please retry"}` + `Retry-After` |
 | `500` | Model or upstream failure | `{"success":false,"error":"Internal server error"}` |
 | `503` | `API_KEY` not configured | `{"success":false,"error":"Server misconfigured: API_KEY secret is not set"}` |
 
@@ -236,9 +239,9 @@ Word splitting is Unicode-aware, so Bengali, Arabic and CJK text splits on real 
 - **Secrets come from the environment.** Nothing is hardcoded and there is no fallback key.
 - **Limits enforced on bytes actually read** (`http.MaxBytesReader`), not on the `Content-Length` header, which can be absent or wrong.
 - **Input validated before paid work**: base64 strictness, decoded-size cap, and JPEG/PNG/WebP magic-byte checks all run before the model is called.
-- **Bounded in-flight inference** (`MAX_CONCURRENT_OCR`) so one caller cannot exhaust memory or free-tier quota for everyone.
-- **Request deadlines and cancellation**: a client that hangs up cancels the upstream call instead of leaving it billed.
-- **No internal detail leaks**: upstream errors are logged server-side, and clients receive a fixed message.
+- **Two resource bounds**: `MAX_CONCURRENT_REQUESTS` caps how many bodies are buffered in memory at once, and `MAX_CONCURRENT_OCR` caps how many calls reach the model. Both answer `429` with `Retry-After` instead of queueing, so one caller cannot exhaust the heap or the free-tier quota on behalf of everyone else.
+- **Request deadlines and cancellation**: a client that hangs up cancels the upstream call instead of leaving it billed, and the write deadline is sized to cover the upload as well as the inference.
+- **No internal detail leaks**: upstream errors are logged server-side, and clients receive a fixed message. An oversized or truncated upstream reply is refused rather than partially believed.
 - **Logs stay clean**: method, path, status, byte count, duration. No keys, images, or transcribed text.
 - **Headers on every response**: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `Cache-Control: no-store`, and a CSP on the docs page.
 - **Connection reuse**: one `http.Client` with a shared transport for all upstream calls.
@@ -301,11 +304,14 @@ npm run deploy
 | Unknown path with `GET` | `405 Method not allowed` | `404` |
 | `HEAD /` | `405 Method not allowed` | `200`, headers only |
 | Malformed JSON body | `500` with the parser's message | `400 {"error":"Invalid JSON body"}` |
+| Valid JSON that is not an object | `400 No image provided` | unchanged, and now distinguished from a parse failure |
 | Non-image bytes | Sent to the model | `400` unsupported format |
 | `500` response body | `error.message` from inside the runtime | fixed `Internal server error` |
 | Oversized body without `Content-Length` | Parsed in full | `413` |
 | `"NO TEXT"` answer | Reported as words `NO`, `TEXT` | `words: []` |
-| Concurrency | Unbounded | `429` + `Retry-After` past `MAX_CONCURRENT_OCR` |
+| Concurrent bodies | Unbounded; memory grew with the number of open connections | `429` + `Retry-After` past `MAX_CONCURRENT_REQUESTS` |
+| Concurrent inference | Unbounded | `429` + `Retry-After` past `MAX_CONCURRENT_OCR` |
+| Slow upload on a poor connection | — | Write deadline now covers the body, not just inference |
 | Upstream reply shape | Whole object stringified into `text` | `500`, logged |
 | `SANCTIONED_DOMAINS` | Declared, never read | removed |
 | Docs page tag | `TypeScript` | `Go` |

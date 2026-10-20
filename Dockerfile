@@ -1,5 +1,6 @@
 # Build the Go OCR service into a small static image.
-FROM golang:1.27-alpine AS build
+# Keep the Go version in step with the `go` directive in go.mod.
+FROM golang:1.26-alpine AS build
 WORKDIR /src
 COPY go.mod ./
 COPY cmd ./cmd
