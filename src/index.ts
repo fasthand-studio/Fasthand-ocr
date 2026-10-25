@@ -3,7 +3,7 @@
  * This worker receives camera frames and returns extracted text using OCR
  */
 
-import docsHTML from '../web/docs.html';
+import docsHTML from './docs.html';
 
 export interface Env {
 	AI: any;
